@@ -1,0 +1,28 @@
+# Secrets — never commit these
+local.settings.json
+appsettings.Development.json
+*.env
+.env
+
+# Build output
+bin/
+obj/
+output/
+artifacts/
+*.log
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+.idea/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+
+# OS
+.DS_Store
+Thumbs.db

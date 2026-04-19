@@ -1,0 +1,45 @@
+name: Deploy travelblogger-api to Azure Functions
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'services/travelblogger-api/**'
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.x'
+  PROJECT_PATH: services/travelblogger-api
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        working-directory: ${{ env.PROJECT_PATH }}
+        run: dotnet restore
+
+      - name: Build
+        working-directory: ${{ env.PROJECT_PATH }}
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        working-directory: ${{ env.PROJECT_PATH }}
+        run: dotnet publish --configuration Release --no-build --output ./output
+
+      - name: Deploy to Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ secrets.AZURE_FUNCTION_APP_NAME }}
+          package: ${{ env.PROJECT_PATH }}/output
+          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
