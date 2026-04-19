@@ -58,9 +58,12 @@ public sealed class AuthFunction
                 return await ResponseFactory.UnauthorizedAsync(req, "Invalid credentials.");
             }
 
+            user.LastLoginDate = DateTime.UtcNow;
+            await _users.UpdateAsync(user, ct);
+
             var response = new AuthResponse
             {
-                UserId = user.Email
+                UserId = user.UserId
             };
 
             _logger.LogInformation("CorrelationId {CorrelationId} - Login completed for {LoginId}", correlationId, loginId);
@@ -73,13 +76,6 @@ public sealed class AuthFunction
         }
     }
 
-    private static string ReadLoginId(LoginRequest body)
-    {
-        if (!string.IsNullOrWhiteSpace(body.UserId))
-        {
-            return body.UserId.Trim();
-        }
-
-        return body.Email.Trim();
-    }
+    private static string ReadLoginId(LoginRequest body) =>
+        body.UserId.Trim();
 }

@@ -65,9 +65,11 @@ public sealed class AppDbContext : DbContext
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(u => u.Id);
-            entity.Property(u => u.Email).HasMaxLength(256).IsRequired();
+            entity.Property(u => u.UserId).HasMaxLength(256).IsRequired();
             entity.Property(u => u.PasswordHash).HasMaxLength(500).IsRequired();
-            entity.HasIndex(u => u.Email).IsUnique();
+            entity.Property(u => u.LastLoginDate).IsRequired(false);
+            entity.Property(u => u.IsActive).IsRequired().HasDefaultValue(true);
+            entity.HasIndex(u => u.UserId).IsUnique();
         });
     }
 }
