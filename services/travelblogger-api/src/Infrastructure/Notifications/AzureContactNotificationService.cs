@@ -125,10 +125,16 @@ public sealed class AzureContactNotificationService : IContactNotificationServic
     private async Task SendReplyEmailAsync(ContactMessage message, string replyMessage, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(_options.Email.ConnectionString))
-            throw new InvalidOperationException("Notifications:Email:ConnectionString is not configured.");
+        {
+            _logger.LogWarning("Reply email skipped: ConnectionString not configured.");
+            return;
+        }
 
         if (string.IsNullOrWhiteSpace(_options.Email.SenderAddress))
-            throw new InvalidOperationException("Notifications:Email:SenderAddress is not configured.");
+        {
+            _logger.LogWarning("Reply email skipped: SenderAddress not configured.");
+            return;
+        }
 
         var subject = "Reply to your contact message";
         var plainText = $"Hi {message.Name},{Environment.NewLine}{Environment.NewLine}{replyMessage}{Environment.NewLine}{Environment.NewLine}Thank you.";
