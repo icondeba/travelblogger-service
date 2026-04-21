@@ -117,6 +117,11 @@ public sealed class ContactMessagesFunction
 
             await _messages.AddAsync(entity, ct);
 
+            // Fire owner notification without blocking the user response
+            _ = _notifications.SendOwnerNotificationAsync(entity, CancellationToken.None)
+                .ContinueWith(t => _logger.LogWarning(t.Exception, "CorrelationId {CorrelationId} - Owner notification failed", correlationId),
+                    TaskContinuationOptions.OnlyOnFaulted);
+
             _logger.LogInformation("CorrelationId {CorrelationId} - CreateContactMessage completed. MessageId {MessageId}", correlationId, entity.Id);
             return await ResponseFactory.CreatedAsync(req, ToResponse(entity));
         }

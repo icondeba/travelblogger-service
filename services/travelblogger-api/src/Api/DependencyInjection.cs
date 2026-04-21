@@ -28,6 +28,10 @@ public static class DependencyInjection
         services.AddSingleton<IOpenApiConfigurationOptions, OpenApiConfigurationOptions>();
         services.AddSingleton<IBlobStorageService, AzureBlobStorageService>();
         services.AddSingleton<IContactNotificationService, AzureContactNotificationService>();
+        services.AddHttpClient("callmebot", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
 
         services.AddScoped<IAboutMeRepository, AboutMeRepository>();
         services.AddScoped<IArticleRepository, ArticleRepository>();
