@@ -34,6 +34,8 @@ public static class DependencyInjection
         services.AddScoped<IContactMessageRepository, ContactMessageRepository>();
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IAwardRepository, AwardRepository>();
+        services.AddScoped<IMilestoneRepository, MilestoneRepository>();
         services.Configure<YouTubeOptions>(configuration.GetSection("YouTube"));
         services.AddHttpClient<IYouTubeVideoService, YouTubeVideoService>();
 

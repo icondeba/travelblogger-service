@@ -12,6 +12,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
     public DbSet<Event> Events => Set<Event>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Award> Awards => Set<Award>();
+    public DbSet<Milestone> Milestones => Set<Milestone>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -70,6 +72,25 @@ public sealed class AppDbContext : DbContext
             entity.Property(u => u.LastLoginDate).IsRequired(false);
             entity.Property(u => u.IsActive).IsRequired().HasDefaultValue(true);
             entity.HasIndex(u => u.UserId).IsUnique();
+        });
+
+        modelBuilder.Entity<Award>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+            entity.Property(a => a.Year).HasMaxLength(20).IsRequired();
+            entity.Property(a => a.Title).HasMaxLength(200).IsRequired();
+            entity.Property(a => a.Organization).HasMaxLength(200).IsRequired();
+            entity.Property(a => a.Description).HasMaxLength(1000).IsRequired();
+            entity.Property(a => a.Image).HasMaxLength(2048).IsRequired();
+            entity.Property(a => a.ImageBlobName).HasMaxLength(512).IsRequired();
+        });
+
+        modelBuilder.Entity<Milestone>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+            entity.Property(m => m.Year).HasMaxLength(20).IsRequired();
+            entity.Property(m => m.Title).HasMaxLength(200).IsRequired();
+            entity.Property(m => m.Description).HasMaxLength(1000).IsRequired();
         });
     }
 }
