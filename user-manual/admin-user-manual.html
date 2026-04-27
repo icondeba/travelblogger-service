@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — User Manual</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 15px; color: #1a1a1a; background: #f5f6fa; line-height: 1.75; }
+
+    /* ── Cover ── */
+    .cover {
+      background: linear-gradient(135deg, #1a3a52 0%, #2d6a9f 100%);
+      color: white; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 60px 40px; page-break-after: always;
+    }
+    .cover .logo { width: 84px; height: 84px; background: rgba(255,255,255,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 38px; margin: 0 auto 28px; }
+    .cover h1 { font-size: 40px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.5px; }
+    .cover .sub { font-size: 19px; opacity: 0.82; margin-bottom: 36px; }
+    .cover .divider { width: 56px; height: 3px; background: rgba(255,255,255,0.35); margin: 20px auto; border-radius: 2px; }
+    .cover .desc { font-size: 15px; opacity: 0.75; max-width: 460px; }
+    .cover .meta { font-size: 13px; opacity: 0.55; margin-top: 60px; }
+
+    /* ── TOC ── */
+    .toc-page { background: white; min-height: 100vh; padding: 64px 88px; page-break-after: always; }
+    .toc-page h2 { font-size: 28px; color: #1a3a52; margin-bottom: 32px; padding-bottom: 14px; border-bottom: 2px solid #e4e9ef; }
+    .toc-list { list-style: none; }
+    .toc-list li { padding: 9px 0; border-bottom: 1px dotted #d4dae2; display: flex; justify-content: space-between; align-items: center; }
+    .toc-list li a { color: #1a6faf; text-decoration: none; font-size: 15px; }
+    .toc-list li a:hover { text-decoration: underline; }
+    .toc-num { color: #999; font-size: 13px; }
+    .toc-group { font-weight: 700; color: #1a3a52; font-size: 15px; }
+    .toc-sub { padding-left: 22px !important; }
+
+    /* ── Layout ── */
+    .content-wrapper { max-width: 920px; margin: 0 auto; padding: 40px 20px; }
+
+    .section {
+      background: white; border-radius: 10px;
+      padding: 50px 58px; margin-bottom: 30px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.07);
+    }
+
+    .sec-head { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; padding-bottom: 16px; border-bottom: 2px solid #e8edf2; }
+    .sec-icon { width: 46px; height: 46px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 21px; flex-shrink: 0; }
+    .ic-blue { background: #dbeafe; } .ic-teal { background: #ccfbf1; } .ic-purple { background: #ede9fe; }
+    .ic-green { background: #dcfce7; } .ic-orange { background: #ffedd5; } .ic-yellow { background: #fef9c3; }
+    .ic-pink { background: #fce7f3; } .ic-red { background: #fee2e2; }
+    .sec-head h2 { font-size: 22px; color: #1a3a52; font-weight: 700; }
+    .sec-head .snum { font-size: 12px; color: #aaa; margin-left: auto; white-space: nowrap; }
+
+    h3 { font-size: 15.5px; color: #1a3a52; margin: 26px 0 10px; font-weight: 600; }
+    p { margin-bottom: 12px; color: #333; }
+
+    /* ── Screenshot ── */
+    .ss { margin: 22px 0; }
+    .ss img { width: 100%; border-radius: 8px; border: 1px solid #dde3ea; box-shadow: 0 2px 12px rgba(0,0,0,0.10); display: block; }
+    .ss-cap { font-size: 12px; color: #888; text-align: center; margin-top: 7px; font-style: italic; }
+
+    /* ── Steps ── */
+    .steps { margin: 16px 0 20px; }
+    .step { display: flex; gap: 13px; margin-bottom: 13px; align-items: flex-start; }
+    .sn { min-width: 27px; height: 27px; background: #1a3a52; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+    .st { flex: 1; padding-top: 3px; color: #333; }
+    .st strong { color: #1a3a52; }
+
+    /* ── Callouts ── */
+    .info  { background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 0 6px 6px 0; padding: 13px 17px; margin: 16px 0; font-size: 14px; color: #1e40af; }
+    .warn  { background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 0 6px 6px 0; padding: 13px 17px; margin: 16px 0; font-size: 14px; color: #92400e; }
+    .ok    { background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 0 6px 6px 0; padding: 13px 17px; margin: 16px 0; font-size: 14px; color: #15803d; }
+
+    /* ── Table ── */
+    .ft { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    .ft th { background: #1a3a52; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+    .ft td { padding: 10px 14px; border-bottom: 1px solid #e8edf2; vertical-align: top; }
+    .ft tr:nth-child(even) td { background: #f8fafc; }
+    .badge-r { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #fee2e2; color: #dc2626; }
+    .badge-o { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #f0f4f8; color: #607d8b; }
+
+    /* ── Inline button demos ── */
+    .btn { display: inline-block; padding: 5px 13px; border-radius: 6px; font-size: 13px; font-weight: 600; vertical-align: middle; }
+    .btn-d { background: #1a3a52; color: white; }
+    .btn-g { background: #16a34a; color: white; }
+    .btn-r { background: #dc2626; color: white; }
+    .btn-s { background: #e8ecf0; color: #333; }
+
+    ul.tips { padding-left: 20px; margin: 10px 0; }
+    ul.tips li { margin-bottom: 9px; color: #444; }
+
+    .page-break { page-break-before: always; }
+
+    @media print {
+      body { background: white; }
+      .content-wrapper { max-width: 100%; padding: 0; }
+      .section { box-shadow: none; border: 1px solid #e0e0e0; margin-bottom: 16px; padding: 36px 44px; }
+      .cover, .toc-page { page-break-after: always; }
+    }
+    @media (max-width: 640px) {
+      .section { padding: 26px 20px; }
+      .toc-page { padding: 40px 24px; }
+      .cover h1 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════ COVER ════════════════════ -->
+<div class="cover">
+  <div class="logo">🏔️</div>
+  <h1>Admin Panel</h1>
+  <p class="sub">User Manual — Mountaineer Debasish</p>
+  <div class="divider"></div>
+  <p class="desc">A complete guide to managing your website content — stories, events, awards, milestones, and contact messages — all from one place.</p>
+  <p class="meta">Version 1.0 &nbsp;·&nbsp; April 2026 &nbsp;·&nbsp; Confidential</p>
+</div>
+
+<!-- ════════════════════ TOC ════════════════════ -->
+<div class="toc-page">
+  <h2>Table of Contents</h2>
+  <ul class="toc-list">
+    <li class="toc-group"><a href="#s1">1. Logging In</a><span class="toc-num">Section 1</span></li>
+    <li class="toc-group"><a href="#s2">2. Dashboard Overview</a><span class="toc-num">Section 2</span></li>
+    <li class="toc-group"><a href="#s3">3. About Me</a><span class="toc-num">Section 3</span></li>
+    <li class="toc-sub"><a href="#s3a">3.1 Viewing Current Content</a><span class="toc-num"></span></li>
+    <li class="toc-sub"><a href="#s3b">3.2 Editing Your Profile</a><span class="toc-num"></span></li>
+    <li class="toc-group"><a href="#s4">4. Stories</a><span class="toc-num">Section 4</span></li>
+    <li class="toc-sub"><a href="#s4a">4.1 Viewing All Stories</a><span class="toc-num"></span></li>
+    <li class="toc-sub"><a href="#s4b">4.2 Creating a New Story</a><span class="toc-num"></span></li>
+    <li class="toc-sub"><a href="#s4c">4.3 Editing / Deleting a Story</a><span class="toc-num"></span></li>
+    <li class="toc-group"><a href="#s5">5. Events</a><span class="toc-num">Section 5</span></li>
+    <li class="toc-sub"><a href="#s5a">5.1 Viewing All Events</a><span class="toc-num"></span></li>
+    <li class="toc-sub"><a href="#s5b">5.2 Creating a New Event</a><span class="toc-num"></span></li>
+    <li class="toc-group"><a href="#s6">6. Awards &amp; Recognition</a><span class="toc-num">Section 6</span></li>
+    <li class="toc-sub"><a href="#s6a">6.1 Viewing All Awards</a><span class="toc-num"></span></li>
+    <li class="toc-sub"><a href="#s6b">6.2 Adding a New Award</a><span class="toc-num"></span></li>
+    <li class="toc-group"><a href="#s7">7. Milestones</a><span class="toc-num">Section 7</span></li>
+    <li class="toc-sub"><a href="#s7a">7.1 Viewing All Milestones</a><span class="toc-num"></span></li>
+    <li class="toc-sub"><a href="#s7b">7.2 Adding a New Milestone</a><span class="toc-num"></span></li>
+    <li class="toc-group"><a href="#s8">8. Contact Messages</a><span class="toc-num">Section 8</span></li>
+    <li class="toc-sub"><a href="#s8a">8.1 Viewing Messages</a><span class="toc-num"></span></li>
+    <li class="toc-sub"><a href="#s8b">8.2 Replying to a Message</a><span class="toc-num"></span></li>
+    <li class="toc-group"><a href="#s9">9. Tips &amp; Best Practices</a><span class="toc-num">Section 9</span></li>
+  </ul>
+</div>
+
+<!-- ════════════════════ CONTENT ════════════════════ -->
+<div class="content-wrapper">
+
+<!-- ── Section 1: Login ── -->
+<div class="section" id="s1">
+  <div class="sec-head">
+    <div class="sec-icon ic-blue">🔐</div>
+    <h2>1. Logging In</h2>
+    <span class="snum">Section 1</span>
+  </div>
+
+  <p>Access the admin panel by visiting the admin URL in any modern web browser (Chrome, Edge, or Firefox).</p>
+
+  <div class="info">🌐 Admin URL: <strong>https://admin.mountaineerdebasish.com</strong></div>
+
+  <div class="ss">
+    <img src="screenshots/01-login.jpg" alt="Admin Login Page" />
+    <div class="ss-cap">Figure 1.1 — Admin Login page</div>
+  </div>
+
+  <h3>Steps to Log In</h3>
+  <div class="steps">
+    <div class="step"><div class="sn">1</div><div class="st">Open your browser and go to the admin URL above.</div></div>
+    <div class="step"><div class="sn">2</div><div class="st">Enter your <strong>User ID</strong> in the first field.</div></div>
+    <div class="step"><div class="sn">3</div><div class="st">Enter your <strong>Password</strong> in the second field.</div></div>
+    <div class="step"><div class="sn">4</div><div class="st">Click the <span class="btn btn-d">Login</span> button. You will be taken to the Dashboard.</div></div>
+  </div>
+
+  <div class="warn">⚠️ Do not share your User ID or Password with anyone. Contact your developer if you forget your credentials.</div>
+</div>
+
+<!-- ── Section 2: Dashboard ── -->
+<div class="section" id="s2">
+  <div class="sec-head">
+    <div class="sec-icon ic-teal">📊</div>
+    <h2>2. Dashboard Overview</h2>
+    <span class="snum">Section 2</span>
+  </div>
+
+  <p>After logging in you land on the <strong>Dashboard</strong> — the home screen of your admin panel. It shows a quick summary of your content.</p>
+
+  <div class="ss">
+    <img src="screenshots/02-dashboard.jpg" alt="Admin Dashboard" />
+    <div class="ss-cap">Figure 2.1 — Admin Dashboard with content summary cards</div>
+  </div>
+
+  <h3>Summary Cards</h3>
+  <p>The dashboard shows three count cards at a glance:</p>
+  <table class="ft">
+    <thead><tr><th>Card</th><th>What It Shows</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Total Stories</strong></td><td>Number of blog stories you have created</td></tr>
+      <tr><td><strong>Total Events</strong></td><td>Number of events you have added</td></tr>
+      <tr><td><strong>Total Contact Messages</strong></td><td>Number of messages received via the contact form</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Navigation Sidebar</h3>
+  <p>The left sidebar is always visible. Click any item to navigate to that section:</p>
+  <table class="ft">
+    <thead><tr><th>Menu Item</th><th>What It Manages</th></tr></thead>
+    <tbody>
+      <tr><td>Dashboard</td><td>Home screen with summary counts</td></tr>
+      <tr><td>About Me</td><td>Your profile heading, biography, and photo</td></tr>
+      <tr><td>Stories</td><td>Blog articles and travel write-ups</td></tr>
+      <tr><td>Events</td><td>Upcoming expedition and event announcements</td></tr>
+      <tr><td>Awards</td><td>Awards and recognition entries</td></tr>
+      <tr><td>Milestones</td><td>Career milestone timeline on the About page</td></tr>
+      <tr><td>Contact Messages</td><td>Inbox for contact form submissions</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Logging Out</h3>
+  <p>Click the <span class="btn btn-s">Logout</span> button in the top-right corner to securely end your session.</p>
+</div>
+
+<!-- ── Section 3: About Me ── -->
+<div class="section" id="s3">
+  <div class="sec-head">
+    <div class="sec-icon ic-purple">👤</div>
+    <h2>3. About Me</h2>
+    <span class="snum">Section 3</span>
+  </div>
+
+  <p>The <strong>About Me</strong> section controls your profile content displayed on the website's About page — your heading, full biography, and profile photo.</p>
+
+  <h3 id="s3a">3.1 Viewing Current Content</h3>
+  <p>Click <strong>About Me</strong> in the sidebar. Your current content is displayed with a <em>Last updated</em> timestamp, along with <span class="btn btn-d">Edit</span> and <span class="btn btn-r">Delete</span> buttons at the bottom.</p>
+
+  <div class="ss">
+    <img src="screenshots/03-about-me-view-mode.jpg" alt="About Me view mode" />
+    <div class="ss-cap">Figure 3.1 — About Me page showing existing content with Edit and Delete buttons</div>
+  </div>
+
+  <h3 id="s3b">3.2 Editing Your Profile</h3>
+  <div class="steps">
+    <div class="step"><div class="sn">1</div><div class="st">Click the <span class="btn btn-d">Edit</span> button to open the edit form.</div></div>
+    <div class="step"><div class="sn">2</div><div class="st">Update the <strong>Heading</strong>, <strong>Biography</strong>, and/or <strong>Profile Image</strong> as needed.</div></div>
+    <div class="step"><div class="sn">3</div><div class="st">To change your photo, click <strong>Choose File</strong> and select a new image from your computer.</div></div>
+    <div class="step"><div class="sn">4</div><div class="st">Click <span class="btn btn-g">Save Changes</span> to apply. Click <span class="btn btn-s">Cancel</span> to discard.</div></div>
+  </div>
+
+  <div class="ss">
+    <img src="screenshots/04-about-me-edit-mode.jpg" alt="About Me edit mode" />
+    <div class="ss-cap">Figure 3.2 — About Me edit form with Heading, Biography, Profile Image, and Save Changes button</div>
+  </div>
+
+  <h3>Fields</h3>
+  <table class="ft">
+    <thead><tr><th>Field</th><th>Description</th><th>Required</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Heading</strong></td><td>Short title shown on the About page (e.g. "Decades of alpine leadership and storytelling.")</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Biography</strong></td><td>Your full profile biography displayed on the About page</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Profile Image</strong></td><td>Your profile photo. Upload JPG, PNG, or WEBP (max 5 MB). The current image is previewed below the file picker.</td><td><span class="badge-r">Required</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="info">📷 Image tip: Use a high-quality photo of at least 600×600 px. The image is stored securely in Azure Blob Storage and a fresh preview link is generated automatically.</div>
+
+  <div class="warn">⚠️ Clicking <strong>Delete</strong> permanently removes your About Me content from the website. You will need to re-enter everything from scratch. Use with caution.</div>
+</div>
+
+<!-- ── Section 4: Stories ── -->
+<div class="section page-break" id="s4">
+  <div class="sec-head">
+    <div class="sec-icon ic-green">📖</div>
+    <h2>4. Stories</h2>
+    <span class="snum">Section 4</span>
+  </div>
+
+  <p>Stories are your blog articles and travel write-ups. They appear on the <strong>Stories</strong> page of your website. You can keep them as drafts or publish them for the world to read.</p>
+
+  <h3 id="s4a">4.1 Viewing All Stories</h3>
+  <p>Click <strong>Stories</strong> in the sidebar. All your stories are listed in a table. When no stories exist yet, the page shows <em>"No stories yet. Create your first story."</em></p>
+
+  <div class="ss">
+    <img src="screenshots/04-stories-list.png.jpg" alt="Stories list" />
+    <div class="ss-cap">Figure 4.1 — Stories page with Add New Stories button (top right)</div>
+  </div>
+
+  <h3 id="s4b">4.2 Creating a New Story</h3>
+  <div class="steps">
+    <div class="step"><div class="sn">1</div><div class="st">Click the <span class="btn btn-d">Add New Stories</span> button at the top right of the Stories page.</div></div>
+    <div class="step"><div class="sn">2</div><div class="st">Fill in the <strong>Title</strong>. The <strong>Slug</strong> is auto-generated from the title — you do not need to type it.</div></div>
+    <div class="step"><div class="sn">3</div><div class="st">Write a short <strong>Excerpt</strong> (preview text shown on the listing page).</div></div>
+    <div class="step"><div class="sn">4</div><div class="st">Set <strong>Status</strong> — choose <em>Draft</em> to save privately or <em>Published</em> to go live on the website.</div></div>
+    <div class="step"><div class="sn">5</div><div class="st">Write your full story in the <strong>Content</strong> rich text editor (supports bold, headings, lists, links, images).</div></div>
+    <div class="step"><div class="sn">6</div><div class="st">Optionally upload a <strong>Cover Image</strong> and set a <strong>Publish Date</strong>.</div></div>
+    <div class="step"><div class="sn">7</div><div class="st">Click <span class="btn btn-g">Publish Story</span> to save.</div></div>
+  </div>
+
+  <div class="ss">
+    <img src="screenshots/05-new-story-form-1.jpg" alt="New Story form top" />
+    <div class="ss-cap">Figure 4.2 — New Story form showing Title, Slug, Excerpt, and Status fields</div>
+  </div>
+
+  <div class="ss">
+    <img src="screenshots/05-new-story-form-2.jpg" alt="New Story form bottom" />
+    <div class="ss-cap">Figure 4.3 — New Story form showing the rich text Content editor, Publish Date, and Publish Story button</div>
+  </div>
+
+  <h3>Story Fields</h3>
+  <table class="ft">
+    <thead><tr><th>Field</th><th>Description</th><th>Required</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Title</strong></td><td>The headline of your story</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Slug</strong></td><td>URL-friendly version of the title. Auto-generated — leave as is unless needed.</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Excerpt</strong></td><td>Short summary shown on the Stories listing page (max 500 characters)</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Status</strong></td><td><em>Draft</em> = saved but not visible on website. <em>Published</em> = live on website.</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Content</strong></td><td>Full story with rich text formatting. Use toolbar for bold, headings, bullet lists, etc.</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Cover Image</strong></td><td>Upload JPG, PNG, or WEBP (max 5 MB). Shown as thumbnail on listing page.</td><td><span class="badge-o">Optional</span></td></tr>
+      <tr><td><strong>Publish Date</strong></td><td>Date shown on the story. Leave blank to use today's date.</td><td><span class="badge-o">Optional</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="s4c">4.3 Editing / Deleting a Story</h3>
+  <p><strong>To edit:</strong> Click the ✏️ edit icon next to a story in the list → make changes → click <span class="btn btn-g">Publish Story</span>.</p>
+  <p><strong>To delete:</strong> Click the 🗑️ delete icon → confirm the dialog.</p>
+  <div class="warn">⚠️ Deletion is permanent and cannot be undone. Also, do not change the Slug of a published story — it will break existing links to that story.</div>
+
+  <div class="info">💡 Tip: Save as <em>Draft</em> first, review it on the live site, then switch to <em>Published</em> when you are happy with it.</div>
+</div>
+
+<!-- ── Section 5: Events ── -->
+<div class="section" id="s5">
+  <div class="sec-head">
+    <div class="sec-icon ic-orange">📅</div>
+    <h2>5. Events</h2>
+    <span class="snum">Section 5</span>
+  </div>
+
+  <p>Events are upcoming or past expedition announcements and programs. They appear on the <strong>Upcoming Events</strong> page of your website.</p>
+
+  <h3 id="s5a">5.1 Viewing All Events</h3>
+  <p>Click <strong>Events</strong> in the sidebar. All events are listed in a table. When no events exist yet, the page shows <em>"No events yet. Add your first event."</em></p>
+
+  <div class="ss">
+    <img src="screenshots/07-event-list.jpg" alt="Events list" />
+    <div class="ss-cap">Figure 5.1 — Upcoming Events page with Add Event button (top right)</div>
+  </div>
+
+  <h3 id="s5b">5.2 Creating a New Event</h3>
+  <div class="steps">
+    <div class="step"><div class="sn">1</div><div class="st">Click the <span class="btn btn-d">Add Event</span> button at the top right.</div></div>
+    <div class="step"><div class="sn">2</div><div class="st">Enter the event <strong>Title</strong>, <strong>Location</strong>, and <strong>Date</strong>.</div></div>
+    <div class="step"><div class="sn">3</div><div class="st">Write the event <strong>Details</strong> — describe what participants can expect.</div></div>
+    <div class="step"><div class="sn">4</div><div class="st">Optionally upload a <strong>Cover Image</strong>.</div></div>
+    <div class="step"><div class="sn">5</div><div class="st">Click <span class="btn btn-g">Create Event</span> to save.</div></div>
+  </div>
+
+  <div class="ss">
+    <img src="screenshots/07-new-event-form-1.jpg" alt="New Event form top" />
+    <div class="ss-cap">Figure 5.2 — New Event form showing Title, Location, Date, and Details fields</div>
+  </div>
+
+  <div class="ss">
+    <img src="screenshots/07-new-event-form-2.jpg" alt="New Event form bottom" />
+    <div class="ss-cap">Figure 5.3 — New Event form showing Cover Image upload and Create Event button</div>
+  </div>
+
+  <h3>Event Fields</h3>
+  <table class="ft">
+    <thead><tr><th>Field</th><th>Description</th><th>Required</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Title</strong></td><td>Name of the event (e.g. "Ladakh Winter Trek 2026")</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Location</strong></td><td>City and country where the event takes place (e.g. "Leh, Ladakh")</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Date</strong></td><td>Date of the event. Click the calendar icon to pick a date.</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Details</strong></td><td>Full description — itinerary, what to bring, registration info, etc.</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Cover Image</strong></td><td>Upload JPG, PNG, or WEBP (max 5 MB)</td><td><span class="badge-o">Optional</span></td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>To edit or delete an event:</strong> Use the ✏️ edit or 🗑️ delete icons in the events list.</p>
+</div>
+
+<!-- ── Section 6: Awards ── -->
+<div class="section page-break" id="s6">
+  <div class="sec-head">
+    <div class="sec-icon ic-yellow">🏆</div>
+    <h2>6. Awards &amp; Recognition</h2>
+    <span class="snum">Section 6</span>
+  </div>
+
+  <p>Manage the awards and recognitions displayed on your website's Awards page.</p>
+
+  <h3 id="s6a">6.1 Viewing All Awards</h3>
+  <p>Click <strong>Awards</strong> in the sidebar. When no awards exist yet, the page shows <em>"No awards yet. Add your first award."</em></p>
+
+  <div class="ss">
+    <img src="screenshots/08-award-list.jpg" alt="Awards list" />
+    <div class="ss-cap">Figure 6.1 — Awards &amp; Recognition page with Add Award button (top right)</div>
+  </div>
+
+  <h3 id="s6b">6.2 Adding a New Award</h3>
+  <div class="steps">
+    <div class="step"><div class="sn">1</div><div class="st">Click the <span class="btn btn-d">Add Award</span> button at the top right.</div></div>
+    <div class="step"><div class="sn">2</div><div class="st">Enter the <strong>Year</strong> the award was received (e.g. 2024).</div></div>
+    <div class="step"><div class="sn">3</div><div class="st">Enter the award <strong>Title</strong> and the <strong>Organization</strong> that gave it.</div></div>
+    <div class="step"><div class="sn">4</div><div class="st">Write a <strong>Description</strong> explaining what the award is for.</div></div>
+    <div class="step"><div class="sn">5</div><div class="st">Optionally upload a <strong>Cover Image</strong> (photo of the award, certificate, or trophy).</div></div>
+    <div class="step"><div class="sn">6</div><div class="st">Click <span class="btn btn-g">Create Award</span> to save.</div></div>
+  </div>
+
+  <div class="ss">
+    <img src="screenshots/08-new-award-form-1.jpg" alt="New Award form top" />
+    <div class="ss-cap">Figure 6.2 — New Award form showing Year, Title, Organization, and Description fields</div>
+  </div>
+
+  <div class="ss">
+    <img src="screenshots/08-new-award-form-2.jpg" alt="New Award form bottom" />
+    <div class="ss-cap">Figure 6.3 — New Award form showing Cover Image upload (optional) and Create Award button</div>
+  </div>
+
+  <h3>Award Fields</h3>
+  <table class="ft">
+    <thead><tr><th>Field</th><th>Description</th><th>Required</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Year</strong></td><td>Year the award was received (e.g. 2024)</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Title</strong></td><td>Full name of the award</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Organization</strong></td><td>The body or institution that awarded it</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Description</strong></td><td>A brief explanation of the achievement</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Cover Image</strong></td><td>Upload JPG, PNG, or WEBP (max 5 MB). Marked as Optional in the form.</td><td><span class="badge-o">Optional</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="info">ℹ️ Awards are displayed newest-first (by year) on the website.</div>
+</div>
+
+<!-- ── Section 7: Milestones ── -->
+<div class="section" id="s7">
+  <div class="sec-head">
+    <div class="sec-icon ic-pink">🗺️</div>
+    <h2>7. Milestones</h2>
+    <span class="snum">Section 7</span>
+  </div>
+
+  <p>Milestones are key career achievements displayed as a timeline on your About page. Use them to highlight the defining moments of your mountaineering journey.</p>
+
+  <h3 id="s7a">7.1 Viewing All Milestones</h3>
+  <p>Click <strong>Milestones</strong> in the sidebar. When none exist yet the page shows <em>"No milestones yet. Add your first milestone."</em></p>
+
+  <div class="ss">
+    <img src="screenshots/09-milestone-list.jpg" alt="Milestones list" />
+    <div class="ss-cap">Figure 7.1 — Milestones page with Add Milestone button (top right)</div>
+  </div>
+
+  <h3 id="s7b">7.2 Adding a New Milestone</h3>
+  <div class="steps">
+    <div class="step"><div class="sn">1</div><div class="st">Click the <span class="btn btn-d">Add Milestone</span> button at the top right.</div></div>
+    <div class="step"><div class="sn">2</div><div class="st">Enter the <strong>Year</strong> the milestone occurred (e.g. 2019).</div></div>
+    <div class="step"><div class="sn">3</div><div class="st">Enter a short <strong>Title</strong> for the milestone (e.g. "First Himalayan Summit").</div></div>
+    <div class="step"><div class="sn">4</div><div class="st">Write a <strong>Description</strong> — a few sentences about the achievement.</div></div>
+    <div class="step"><div class="sn">5</div><div class="st">Click <span class="btn btn-g">Create Milestone</span> to save.</div></div>
+  </div>
+
+  <div class="ss">
+    <img src="screenshots/09-new-milestone-form.jpg" alt="New Milestone form" />
+    <div class="ss-cap">Figure 7.2 — New Milestone form with Year, Title, Description fields and Create Milestone button</div>
+  </div>
+
+  <h3>Milestone Fields</h3>
+  <table class="ft">
+    <thead><tr><th>Field</th><th>Description</th><th>Required</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Year</strong></td><td>The year this milestone occurred (e.g. 2019)</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Title</strong></td><td>Short headline for the milestone</td><td><span class="badge-r">Required</span></td></tr>
+      <tr><td><strong>Description</strong></td><td>A brief description of the achievement</td><td><span class="badge-r">Required</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="info">ℹ️ Milestones are displayed in chronological order (oldest to newest) on the About page timeline.</div>
+</div>
+
+<!-- ── Section 8: Contact Messages ── -->
+<div class="section page-break" id="s8">
+  <div class="sec-head">
+    <div class="sec-icon ic-red">✉️</div>
+    <h2>8. Contact Messages</h2>
+    <span class="snum">Section 8</span>
+  </div>
+
+  <p>When a visitor submits the contact form on your website, their message appears here. You also receive an <strong>email notification</strong> at your inbox automatically.</p>
+
+  <h3 id="s8a">8.1 Viewing Messages</h3>
+  <p>Click <strong>Contact Messages</strong> in the sidebar. All submissions are shown in a table.</p>
+
+  <div class="ss">
+    <img src="screenshots/10-contact-list.jpg" alt="Contact Messages list" />
+    <div class="ss-cap">Figure 8.1 — Contact Messages inbox showing Pending and Replied statuses</div>
+  </div>
+
+  <h3>What Each Column Means</h3>
+  <table class="ft">
+    <thead><tr><th>Column</th><th>What It Shows</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Name</strong></td><td>Visitor's full name</td></tr>
+      <tr><td><strong>Email</strong></td><td>Visitor's email address</td></tr>
+      <tr><td><strong>Phone</strong></td><td>Visitor's phone number (with country code)</td></tr>
+      <tr><td><strong>Message</strong></td><td>The message they wrote in the contact form</td></tr>
+      <tr><td><strong>Submitted</strong></td><td>Date and time the message was sent</td></tr>
+      <tr><td><strong>Status</strong></td><td><em>Pending</em> = not yet replied. <em>Replied</em> = a reply has been sent.</td></tr>
+      <tr><td><strong>Actions</strong></td><td>↩ Reply button — click to open the reply panel</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="s8b">8.2 Replying to a Message</h3>
+  <p>You can send a reply directly from the admin panel. The visitor will receive your reply by email.</p>
+
+  <div class="steps">
+    <div class="step"><div class="sn">1</div><div class="st">Find the message you want to reply to in the list.</div></div>
+    <div class="step"><div class="sn">2</div><div class="st">Click the <strong>↩ reply arrow</strong> button in the Actions column on the right.</div></div>
+    <div class="step"><div class="sn">3</div><div class="st">A <strong>Reply Message</strong> text area appears below the message row. Type your reply.</div></div>
+    <div class="step"><div class="sn">4</div><div class="st">Click <span class="btn btn-g">Send Reply</span>. The visitor's email receives your reply instantly.</div></div>
+    <div class="step"><div class="sn">5</div><div class="st">To cancel without sending, click <span class="btn btn-s">Cancel</span>.</div></div>
+  </div>
+
+  <div class="ss">
+    <img src="screenshots/10-contact-list-reply.jpg" alt="Contact Messages reply panel" />
+    <div class="ss-cap">Figure 8.2 — Reply panel open with text area, Send Reply and Cancel buttons</div>
+  </div>
+
+  <div class="ok">✅ After a successful reply the message status changes from <strong>Pending</strong> to <strong>Replied</strong> (shown in green).</div>
+  <div class="info">📧 You receive an email notification at <strong>icondeba4@gmail.com</strong> every time a new contact message is submitted.</div>
+</div>
+
+<!-- ── Section 9: Tips ── -->
+<div class="section" id="s9">
+  <div class="sec-head">
+    <div class="sec-icon ic-green">💡</div>
+    <h2>9. Tips &amp; Best Practices</h2>
+    <span class="snum">Section 9</span>
+  </div>
+
+  <h3>Images</h3>
+  <ul class="tips">
+    <li>Always use <strong>JPG, PNG, or WEBP</strong> format. Avoid BMP or TIFF.</li>
+    <li>Keep image file sizes <strong>under 5 MB</strong>. Use a free tool like <strong>squoosh.app</strong> to compress before uploading.</li>
+    <li>Landscape images (wider than tall) work best for stories and events. Portrait works for profile photos.</li>
+  </ul>
+
+  <h3>Stories</h3>
+  <ul class="tips">
+    <li>Use <strong>Draft</strong> to save a story privately first, review it on the live website, then switch to <strong>Published</strong>.</li>
+    <li>Keep the Excerpt short — 2 to 3 sentences only. It is the preview text on the listing page.</li>
+    <li>Do not change the <strong>Slug</strong> after a story is published — existing links will break.</li>
+  </ul>
+
+  <h3>Contact Messages</h3>
+  <ul class="tips">
+    <li>Reply within <strong>24–48 hours</strong> for the best client experience.</li>
+    <li>You will receive an email notification at <strong>icondeba4@gmail.com</strong> for every new submission.</li>
+    <li>A message marked <strong>Replied</strong> cannot be changed back to Pending.</li>
+  </ul>
+
+  <h3>General</h3>
+  <ul class="tips">
+    <li>Changes made in the admin panel appear on the live website <strong>immediately</strong>.</li>
+    <li>There is no "undo" — double-check content before saving or deleting.</li>
+    <li>Use a modern browser (Chrome, Edge, or Firefox) for the best experience.</li>
+    <li>If something looks wrong on the website after saving, try a <strong>hard refresh</strong>: press <strong>Ctrl + Shift + R</strong>.</li>
+  </ul>
+
+  <div class="warn">⚠️ <strong>Deletions are permanent.</strong> Stories, Events, Awards, and Milestones cannot be recovered after deletion. Always double-check before clicking Delete.</div>
+</div>
+
+<!-- Footer -->
+<div style="text-align:center; padding: 44px 20px 60px; color: #999; font-size: 13px;">
+  <p>Admin Panel User Manual — Mountaineer Debasish &nbsp;·&nbsp; Version 1.0 &nbsp;·&nbsp; April 2026</p>
+  <p style="margin-top:6px;">For technical support, contact your developer.</p>
+</div>
+
+</div><!-- end content-wrapper -->
+</body>
+</html>
