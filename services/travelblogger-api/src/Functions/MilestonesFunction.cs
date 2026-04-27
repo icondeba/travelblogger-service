@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using TravelBlogger.Common;
@@ -16,14 +17,19 @@ public sealed class MilestonesFunction
 {
     private const int TitleMaxLength = 200;
     private const int YearMaxLength = 20;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
+    private const string CacheKeyAll = "milestones:all";
+    private static string CacheKeyById(Guid id) => $"milestones:{id}";
 
     private readonly IMilestoneRepository _milestones;
     private readonly ILogger<MilestonesFunction> _logger;
+    private readonly IMemoryCache _cache;
 
-    public MilestonesFunction(IMilestoneRepository milestonesRepo, ILogger<MilestonesFunction> logger)
+    public MilestonesFunction(IMilestoneRepository milestonesRepo, ILogger<MilestonesFunction> logger, IMemoryCache cache)
     {
         _milestones = milestonesRepo;
         _logger = logger;
+        _cache = cache;
     }
 
     [Function("GetMilestones")]
@@ -38,9 +44,16 @@ public sealed class MilestonesFunction
 
         try
         {
+            if (_cache.TryGetValue(CacheKeyAll, out List<MilestoneResponse>? cached) && cached is not null)
+            {
+                _logger.LogInformation("CorrelationId {CorrelationId} - GetMilestones served from cache. Count {Count}", correlationId, cached.Count);
+                return await ResponseFactory.OkCachedAsync(req, cached);
+            }
+
             var items = await _milestones.GetAllAsync(ct);
             var response = items.Select(ToResponse).ToList();
-            return await ResponseFactory.OkAsync(req, response);
+            _cache.Set(CacheKeyAll, response, CacheTtl);
+            return await ResponseFactory.OkCachedAsync(req, response);
         }
         catch (Exception ex)
         {
@@ -64,11 +77,17 @@ public sealed class MilestonesFunction
 
         try
         {
+            var cacheKey = CacheKeyById(id);
+            if (_cache.TryGetValue(cacheKey, out MilestoneResponse? cached) && cached is not null)
+                return await ResponseFactory.OkCachedAsync(req, cached);
+
             var entity = await _milestones.GetByIdAsync(id, ct);
             if (entity is null)
                 return await ResponseFactory.NotFoundAsync(req, "Milestone not found.");
 
-            return await ResponseFactory.OkAsync(req, ToResponse(entity));
+            var response = ToResponse(entity);
+            _cache.Set(cacheKey, response, CacheTtl);
+            return await ResponseFactory.OkCachedAsync(req, response);
         }
         catch (Exception ex)
         {
@@ -112,6 +131,7 @@ public sealed class MilestonesFunction
             };
 
             await _milestones.AddAsync(entity, ct);
+            _cache.Remove(CacheKeyAll);
             _logger.LogInformation("CorrelationId {CorrelationId} - CreateMilestone completed. MilestoneId {MilestoneId}", correlationId, entity.Id);
             return await ResponseFactory.CreatedAsync(req, ToResponse(entity));
         }
@@ -158,6 +178,8 @@ public sealed class MilestonesFunction
             entity.Description = body.Description.Trim();
 
             await _milestones.UpdateAsync(entity, ct);
+            _cache.Remove(CacheKeyAll);
+            _cache.Remove(CacheKeyById(id));
             _logger.LogInformation("CorrelationId {CorrelationId} - UpdateMilestone completed. MilestoneId {MilestoneId}", correlationId, id);
             return await ResponseFactory.OkAsync(req, ToResponse(entity), "Updated");
         }
@@ -189,6 +211,8 @@ public sealed class MilestonesFunction
             if (!deleted)
                 return await ResponseFactory.NotFoundAsync(req, "Milestone not found.");
 
+            _cache.Remove(CacheKeyAll);
+            _cache.Remove(CacheKeyById(id));
             _logger.LogInformation("CorrelationId {CorrelationId} - DeleteMilestone completed. MilestoneId {MilestoneId}", correlationId, id);
             return await ResponseFactory.NoContentAsync(req);
         }

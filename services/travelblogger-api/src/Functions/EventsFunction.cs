@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using TravelBlogger.Common;
@@ -21,16 +22,29 @@ public sealed class EventsFunction
     private const int TitleMaxLength = 200;
     private const int LocationMaxLength = 200;
     private const int ImageMaxLength = 2048;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
+    private const string VersionKey = "events:v";
 
     private readonly IEventRepository _events;
     private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<EventsFunction> _logger;
+    private readonly IMemoryCache _cache;
 
-    public EventsFunction(IEventRepository eventsRepo, IBlobStorageService blobStorage, ILogger<EventsFunction> logger)
+    public EventsFunction(IEventRepository eventsRepo, IBlobStorageService blobStorage, ILogger<EventsFunction> logger, IMemoryCache cache)
     {
         _events = eventsRepo;
         _blobStorage = blobStorage;
         _logger = logger;
+        _cache = cache;
+    }
+
+    private long EventsVersion =>
+        _cache.GetOrCreate(VersionKey, e => { e.Priority = CacheItemPriority.NeverRemove; return 0L; });
+
+    private void InvalidateEventsCache()
+    {
+        _cache.TryGetValue(VersionKey, out long current);
+        _cache.Set(VersionKey, current + 1, new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove });
     }
 
     [Function("GetEvents")]
@@ -67,8 +81,17 @@ public sealed class EventsFunction
                 return await ResponseFactory.BadRequestAsync(req, "Query parameter 'offset' must be greater than or equal to 0.");
             }
 
+            var v = EventsVersion;
+
             if (hasPagingArgs)
             {
+                var pageCacheKey = $"events:{v}:page:{offset}:{pageSize}";
+                if (_cache.TryGetValue(pageCacheKey, out EventListResponse? cachedPage) && cachedPage is not null)
+                {
+                    _logger.LogInformation("CorrelationId {CorrelationId} - GetEvents (paged) served from cache", correlationId);
+                    return await ResponseFactory.OkCachedAsync(req, cachedPage);
+                }
+
                 var pageItems = await _events.GetPageAsync(offset, pageSize + 1, ct);
                 var hasMore = pageItems.Count > pageSize;
                 var events = (hasMore ? pageItems.Take(pageSize) : pageItems)
@@ -81,20 +104,29 @@ public sealed class EventsFunction
                     NextOffset = hasMore ? offset + pageSize : null
                 };
 
+                _cache.Set(pageCacheKey, pageResponse, CacheTtl);
                 _logger.LogInformation(
                     "CorrelationId {CorrelationId} - GetEvents completed (paged). Count {Count}, HasMore {HasMore}",
                     correlationId,
                     pageResponse.Items.Count,
                     pageResponse.HasMore);
 
-                return await ResponseFactory.OkAsync(req, pageResponse);
+                return await ResponseFactory.OkCachedAsync(req, pageResponse);
+            }
+
+            var allCacheKey = $"events:{v}:all";
+            if (_cache.TryGetValue(allCacheKey, out List<EventResponse>? cachedAll) && cachedAll is not null)
+            {
+                _logger.LogInformation("CorrelationId {CorrelationId} - GetEvents served from cache", correlationId);
+                return await ResponseFactory.OkCachedAsync(req, cachedAll);
             }
 
             var items = await _events.GetAllAsync(ct);
             var response = items.Select(ToResponse).ToList();
+            _cache.Set(allCacheKey, response, CacheTtl);
 
             _logger.LogInformation("CorrelationId {CorrelationId} - GetEvents completed", correlationId);
-            return await ResponseFactory.OkAsync(req, response);
+            return await ResponseFactory.OkCachedAsync(req, response);
         }
         catch (Exception ex)
         {
@@ -125,6 +157,10 @@ public sealed class EventsFunction
 
         try
         {
+            var cacheKey = $"events:{EventsVersion}:id:{id}";
+            if (_cache.TryGetValue(cacheKey, out EventResponse? cached) && cached is not null)
+                return await ResponseFactory.OkCachedAsync(req, cached);
+
             var entity = await _events.GetByIdAsync(id, ct);
             if (entity is null)
             {
@@ -132,8 +168,10 @@ public sealed class EventsFunction
                 return await ResponseFactory.NotFoundAsync(req, "Event not found.");
             }
 
+            var response = ToResponse(entity);
+            _cache.Set(cacheKey, response, CacheTtl);
             _logger.LogInformation("CorrelationId {CorrelationId} - GetEventById completed. EventId {EventId}", correlationId, id);
-            return await ResponseFactory.OkAsync(req, ToResponse(entity));
+            return await ResponseFactory.OkCachedAsync(req, response);
         }
         catch (Exception ex)
         {
@@ -193,6 +231,7 @@ public sealed class EventsFunction
             };
 
             await _events.AddAsync(entity, ct);
+            InvalidateEventsCache();
 
             _logger.LogInformation("CorrelationId {CorrelationId} - CreateEvent completed. EventId {EventId}", correlationId, entity.Id);
             return await ResponseFactory.CreatedAsync(req, ToResponse(entity));
@@ -260,6 +299,7 @@ public sealed class EventsFunction
             entity.EventDate = body.EventDate;
 
             await _events.UpdateAsync(entity, ct);
+            InvalidateEventsCache();
 
             _logger.LogInformation("CorrelationId {CorrelationId} - UpdateEvent completed. EventId {EventId}", correlationId, id);
             return await ResponseFactory.OkAsync(req, ToResponse(entity), "Updated");
@@ -300,6 +340,7 @@ public sealed class EventsFunction
                 return await ResponseFactory.NotFoundAsync(req, "Event not found.");
             }
 
+            InvalidateEventsCache();
             _logger.LogInformation("CorrelationId {CorrelationId} - DeleteEvent completed. EventId {EventId}", correlationId, id);
             return await ResponseFactory.NoContentAsync(req);
         }

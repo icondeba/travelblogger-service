@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
 using TravelBlogger.Common;
 using TravelBlogger.Contracts.Requests;
@@ -17,13 +18,18 @@ namespace TravelBlogger.Functions;
 public sealed class AboutMeFunction
 {
     private const int HeadingMaxLength = 250;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
+    private const string CacheKey = "aboutme";
+
     private readonly IAboutMeRepository _aboutMe;
     private readonly IBlobStorageService _blobStorage;
+    private readonly IMemoryCache _cache;
 
-    public AboutMeFunction(IAboutMeRepository aboutMe, IBlobStorageService blobStorage)
+    public AboutMeFunction(IAboutMeRepository aboutMe, IBlobStorageService blobStorage, IMemoryCache cache)
     {
         _aboutMe = aboutMe;
         _blobStorage = blobStorage;
+        _cache = cache;
     }
 
     [Function("GetAboutMe")]
@@ -34,6 +40,9 @@ public sealed class AboutMeFunction
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "about-me")] HttpRequestData req,
         CancellationToken ct)
     {
+        if (_cache.TryGetValue(CacheKey, out AboutMeResponse? cached) && cached is not null)
+            return await ResponseFactory.OkCachedAsync(req, cached);
+
         var entity = await _aboutMe.GetAsync(ct);
         if (entity is null)
         {
@@ -50,7 +59,8 @@ public sealed class AboutMeFunction
             UpdatedAt = entity.UpdatedAt
         };
 
-        return await ResponseFactory.OkAsync(req, response);
+        _cache.Set(CacheKey, response, CacheTtl);
+        return await ResponseFactory.OkCachedAsync(req, response);
     }
 
     [Function("UpsertAboutMe")]
@@ -158,6 +168,8 @@ public sealed class AboutMeFunction
             UpdatedAt = entity.UpdatedAt
         };
 
+        _cache.Remove(CacheKey);
+
         if (isNew)
         {
             return await ResponseFactory.CreatedAsync(req, response);
@@ -192,6 +204,7 @@ public sealed class AboutMeFunction
             return await ResponseFactory.NotFoundAsync(req, "About me not found.");
         }
 
+        _cache.Remove(CacheKey);
         return await ResponseFactory.NoContentAsync(req);
     }
 
@@ -227,6 +240,7 @@ public sealed class AboutMeFunction
             return await ResponseFactory.NotFoundAsync(req, "About me not found.");
         }
 
+        _cache.Remove(CacheKey);
         return await ResponseFactory.NoContentAsync(req);
     }
 
@@ -293,6 +307,8 @@ public sealed class AboutMeFunction
                 Image = entity.Image,
                 UpdatedAt = entity.UpdatedAt
             };
+
+            _cache.Remove(CacheKey);
 
             if (isNew)
             {

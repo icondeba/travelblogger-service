@@ -12,6 +12,14 @@ public static class ResponseFactory
         return res;
     }
 
+    public static async Task<HttpResponseData> OkCachedAsync<T>(HttpRequestData req, T data, int maxAgeSeconds = 300, string message = "OK")
+    {
+        var res = req.CreateResponse(HttpStatusCode.OK);
+        res.Headers.Add("Cache-Control", $"public, max-age={maxAgeSeconds}");
+        await res.WriteAsJsonAsync(ApiResponse<T>.Ok(data, message));
+        return res;
+    }
+
     public static async Task<HttpResponseData> CreatedAsync<T>(HttpRequestData req, T data, string message = "Created")
     {
         var res = req.CreateResponse(HttpStatusCode.Created);

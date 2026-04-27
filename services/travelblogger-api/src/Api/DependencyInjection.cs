@@ -33,6 +33,8 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(10);
         });
 
+        services.AddMemoryCache();
+
         services.AddScoped<IAboutMeRepository, AboutMeRepository>();
         services.AddScoped<IArticleRepository, ArticleRepository>();
         services.AddScoped<IContactMessageRepository, ContactMessageRepository>();

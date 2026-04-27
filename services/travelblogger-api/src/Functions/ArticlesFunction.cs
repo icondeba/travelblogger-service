@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using TravelBlogger.Common;
@@ -22,16 +23,29 @@ public sealed class ArticlesFunction
     private const int SlugMaxLength = 200;
     private const int ExcerptMaxLength = 500;
     private const int ImageMaxLength = 2048;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
+    private const string VersionKey = "articles:v";
 
     private readonly IArticleRepository _articles;
     private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<ArticlesFunction> _logger;
+    private readonly IMemoryCache _cache;
 
-    public ArticlesFunction(IArticleRepository articles, IBlobStorageService blobStorage, ILogger<ArticlesFunction> logger)
+    public ArticlesFunction(IArticleRepository articles, IBlobStorageService blobStorage, ILogger<ArticlesFunction> logger, IMemoryCache cache)
     {
         _articles = articles;
         _blobStorage = blobStorage;
         _logger = logger;
+        _cache = cache;
+    }
+
+    private long ArticlesVersion =>
+        _cache.GetOrCreate(VersionKey, e => { e.Priority = CacheItemPriority.NeverRemove; return 0L; });
+
+    private void InvalidateArticlesCache()
+    {
+        _cache.TryGetValue(VersionKey, out long current);
+        _cache.Set(VersionKey, current + 1, new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove });
     }
 
     [Function("GetArticles")]
@@ -79,8 +93,17 @@ public sealed class ArticlesFunction
                 }
             }
 
+            var v = ArticlesVersion;
+
             if (hasPagingArgs)
             {
+                var pageCacheKey = $"articles:{v}:page:{offset}:{pageSize}:{publishedOnly}";
+                if (_cache.TryGetValue(pageCacheKey, out ArticleListResponse? cachedPage) && cachedPage is not null)
+                {
+                    _logger.LogInformation("CorrelationId {CorrelationId} - GetArticles (paged) served from cache", correlationId);
+                    return await ResponseFactory.OkCachedAsync(req, cachedPage);
+                }
+
                 var pageItems = await _articles.GetPageAsync(offset, pageSize + 1, publishedOnly, ct);
                 var hasMore = pageItems.Count > pageSize;
                 var articles = (hasMore ? pageItems.Take(pageSize) : pageItems)
@@ -93,20 +116,29 @@ public sealed class ArticlesFunction
                     NextOffset = hasMore ? offset + pageSize : null
                 };
 
+                _cache.Set(pageCacheKey, pageResponse, CacheTtl);
                 _logger.LogInformation(
                     "CorrelationId {CorrelationId} - GetArticles completed (paged). Count {Count}, HasMore {HasMore}",
                     correlationId,
                     pageResponse.Items.Count,
                     pageResponse.HasMore);
 
-                return await ResponseFactory.OkAsync(req, pageResponse);
+                return await ResponseFactory.OkCachedAsync(req, pageResponse);
+            }
+
+            var allCacheKey = $"articles:{v}:all";
+            if (_cache.TryGetValue(allCacheKey, out List<ArticleResponse>? cachedAll) && cachedAll is not null)
+            {
+                _logger.LogInformation("CorrelationId {CorrelationId} - GetArticles served from cache", correlationId);
+                return await ResponseFactory.OkCachedAsync(req, cachedAll);
             }
 
             var items = await _articles.GetAllAsync(ct);
             var response = items.Select(ToResponse).ToList();
+            _cache.Set(allCacheKey, response, CacheTtl);
 
             _logger.LogInformation("CorrelationId {CorrelationId} - GetArticles completed", correlationId);
-            return await ResponseFactory.OkAsync(req, response);
+            return await ResponseFactory.OkCachedAsync(req, response);
         }
         catch (Exception ex)
         {
@@ -137,6 +169,10 @@ public sealed class ArticlesFunction
 
         try
         {
+            var cacheKey = $"articles:{ArticlesVersion}:id:{id}";
+            if (_cache.TryGetValue(cacheKey, out ArticleResponse? cached) && cached is not null)
+                return await ResponseFactory.OkCachedAsync(req, cached);
+
             var article = await _articles.GetByIdAsync(id, ct);
             if (article is null)
             {
@@ -144,8 +180,10 @@ public sealed class ArticlesFunction
                 return await ResponseFactory.NotFoundAsync(req, "Article not found.");
             }
 
+            var response = ToResponse(article);
+            _cache.Set(cacheKey, response, CacheTtl);
             _logger.LogInformation("CorrelationId {CorrelationId} - GetArticleById completed. ArticleId {ArticleId}", correlationId, id);
-            return await ResponseFactory.OkAsync(req, ToResponse(article));
+            return await ResponseFactory.OkCachedAsync(req, response);
         }
         catch (Exception ex)
         {
@@ -169,6 +207,10 @@ public sealed class ArticlesFunction
 
         try
         {
+            var cacheKey = $"articles:{ArticlesVersion}:slug:{slug}";
+            if (_cache.TryGetValue(cacheKey, out ArticleResponse? cached) && cached is not null)
+                return await ResponseFactory.OkCachedAsync(req, cached);
+
             var article = await _articles.GetBySlugAsync(slug, ct);
             if (article is null)
             {
@@ -176,8 +218,10 @@ public sealed class ArticlesFunction
                 return await ResponseFactory.NotFoundAsync(req, "Article not found.");
             }
 
+            var response = ToResponse(article);
+            _cache.Set(cacheKey, response, CacheTtl);
             _logger.LogInformation("CorrelationId {CorrelationId} - GetArticleBySlug completed. ArticleId {ArticleId}", correlationId, article.Id);
-            return await ResponseFactory.OkAsync(req, ToResponse(article));
+            return await ResponseFactory.OkCachedAsync(req, response);
         }
         catch (Exception ex)
         {
@@ -253,6 +297,7 @@ public sealed class ArticlesFunction
             };
 
             await _articles.AddAsync(entity, ct);
+            InvalidateArticlesCache();
 
             _logger.LogInformation("CorrelationId {CorrelationId} - CreateArticle completed. ArticleId {ArticleId}", correlationId, entity.Id);
             return await ResponseFactory.CreatedAsync(req, ToResponse(entity));
@@ -336,6 +381,7 @@ public sealed class ArticlesFunction
             entity.PublishedAt = body.PublishedAt;
 
             await _articles.UpdateAsync(entity, ct);
+            InvalidateArticlesCache();
 
             _logger.LogInformation("CorrelationId {CorrelationId} - UpdateArticle completed. ArticleId {ArticleId}", correlationId, id);
             return await ResponseFactory.OkAsync(req, ToResponse(entity), "Updated");
@@ -376,6 +422,7 @@ public sealed class ArticlesFunction
                 return await ResponseFactory.NotFoundAsync(req, "Article not found.");
             }
 
+            InvalidateArticlesCache();
             _logger.LogInformation("CorrelationId {CorrelationId} - DeleteArticle completed. ArticleId {ArticleId}", correlationId, id);
             return await ResponseFactory.NoContentAsync(req);
         }

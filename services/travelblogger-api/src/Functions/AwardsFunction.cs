@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using TravelBlogger.Common;
@@ -19,16 +20,21 @@ public sealed class AwardsFunction
     private const int OrgMaxLength = 200;
     private const int YearMaxLength = 20;
     private const int ImageMaxLength = 2048;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
+    private const string CacheKeyAll = "awards:all";
+    private static string CacheKeyById(Guid id) => $"awards:{id}";
 
     private readonly IAwardRepository _awards;
     private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<AwardsFunction> _logger;
+    private readonly IMemoryCache _cache;
 
-    public AwardsFunction(IAwardRepository awardsRepo, IBlobStorageService blobStorage, ILogger<AwardsFunction> logger)
+    public AwardsFunction(IAwardRepository awardsRepo, IBlobStorageService blobStorage, ILogger<AwardsFunction> logger, IMemoryCache cache)
     {
         _awards = awardsRepo;
         _blobStorage = blobStorage;
         _logger = logger;
+        _cache = cache;
     }
 
     [Function("GetAwards")]
@@ -43,10 +49,17 @@ public sealed class AwardsFunction
 
         try
         {
+            if (_cache.TryGetValue(CacheKeyAll, out List<AwardResponse>? cached) && cached is not null)
+            {
+                _logger.LogInformation("CorrelationId {CorrelationId} - GetAwards served from cache. Count {Count}", correlationId, cached.Count);
+                return await ResponseFactory.OkCachedAsync(req, cached);
+            }
+
             var items = await _awards.GetAllAsync(ct);
             var response = items.Select(ToResponse).ToList();
+            _cache.Set(CacheKeyAll, response, CacheTtl);
             _logger.LogInformation("CorrelationId {CorrelationId} - GetAwards completed. Count {Count}", correlationId, response.Count);
-            return await ResponseFactory.OkAsync(req, response);
+            return await ResponseFactory.OkCachedAsync(req, response);
         }
         catch (Exception ex)
         {
@@ -70,11 +83,17 @@ public sealed class AwardsFunction
 
         try
         {
+            var cacheKey = CacheKeyById(id);
+            if (_cache.TryGetValue(cacheKey, out AwardResponse? cached) && cached is not null)
+                return await ResponseFactory.OkCachedAsync(req, cached);
+
             var entity = await _awards.GetByIdAsync(id, ct);
             if (entity is null)
                 return await ResponseFactory.NotFoundAsync(req, "Award not found.");
 
-            return await ResponseFactory.OkAsync(req, ToResponse(entity));
+            var response = ToResponse(entity);
+            _cache.Set(cacheKey, response, CacheTtl);
+            return await ResponseFactory.OkCachedAsync(req, response);
         }
         catch (Exception ex)
         {
@@ -123,6 +142,7 @@ public sealed class AwardsFunction
             };
 
             await _awards.AddAsync(entity, ct);
+            _cache.Remove(CacheKeyAll);
             _logger.LogInformation("CorrelationId {CorrelationId} - CreateAward completed. AwardId {AwardId}", correlationId, entity.Id);
             return await ResponseFactory.CreatedAsync(req, ToResponse(entity));
         }
@@ -174,6 +194,8 @@ public sealed class AwardsFunction
             entity.ImageBlobName = imageBlobName;
 
             await _awards.UpdateAsync(entity, ct);
+            _cache.Remove(CacheKeyAll);
+            _cache.Remove(CacheKeyById(id));
             _logger.LogInformation("CorrelationId {CorrelationId} - UpdateAward completed. AwardId {AwardId}", correlationId, id);
             return await ResponseFactory.OkAsync(req, ToResponse(entity), "Updated");
         }
@@ -205,6 +227,8 @@ public sealed class AwardsFunction
             if (!deleted)
                 return await ResponseFactory.NotFoundAsync(req, "Award not found.");
 
+            _cache.Remove(CacheKeyAll);
+            _cache.Remove(CacheKeyById(id));
             _logger.LogInformation("CorrelationId {CorrelationId} - DeleteAward completed. AwardId {AwardId}", correlationId, id);
             return await ResponseFactory.NoContentAsync(req);
         }
